@@ -1,0 +1,1028 @@
+<!-- MeshMind Observer Dashboard — Redesigned for production deployments.
+     This panel opens its own WebSocket connection to the backend and renders
+     everything dynamically using D3, CSS3 hardware acceleration, and stable layout physics. -->
+<div id="meshmind-root"></div>
+
+<style>
+  :root {
+    --void:        #06090e;
+    --panel:       rgba(10, 16, 26, 0.85);
+    --panel-solid: #0d131f;
+    --card:        #121b2d;
+    --border:      rgba(34, 217, 238, 0.15);
+    --border-glow: rgba(34, 217, 238, 0.35);
+    --text:        #f0f4f9;
+    --text-dim:    #a0aec0;
+    --text-faint:  #4a5568;
+
+    --cyan:    #00f0ff;
+    --emerald: #00ff66;
+    --amber:   #ffb300;
+    --orange:  #ff6600;
+    --red:     #ff003c;
+    --blue:    #0066ff;
+    --violet:  #bd00ff;
+
+    --font-display: 'Rajdhani', 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  #meshmind-root, #meshmind-root * { box-sizing: border-box; }
+  #meshmind-root {
+    background:
+      radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 90% 80%, rgba(189, 0, 255, 0.04) 0%, transparent 40%),
+      var(--void);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: var(--font-mono);
+    padding: 16px;
+    min-height: 1360px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  
+  #meshmind-root::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0, 240, 255, 0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 240, 255, 0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 20%, black 40%, transparent 95%);
+  }
+
+  /* ---- Header ---- */
+  .mm-header {
+    position: relative; z-index: 2;
+    display: flex; align-items: center; gap: 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.05);
+    border-radius: 12px;
+    padding: 14px 24px;
+    backdrop-filter: blur(15px);
+    margin-bottom: 14px;
+  }
+  .mm-logo {
+    font-family: var(--font-display); font-weight: 700; font-size: 26px;
+    letter-spacing: 2.5px; color: var(--text);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .mm-logo .dot {
+    width: 10px; height: 10px; border-radius: 50%; background: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan); animation: mm-blink 2.5s ease-in-out infinite;
+  }
+  .mm-logo b { color: var(--cyan); }
+  @keyframes mm-blink { 0%, 100% { opacity: 1; filter: brightness(1.2); } 50% { opacity: 0.3; } }
+
+  .mm-stat { display: flex; flex-direction: column; gap: 3px; min-width: 95px; }
+  .mm-stat .v { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--text);
+               font-variant-numeric: tabular-nums; }
+  .mm-stat .l { font-size: 10px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase; }
+  .mm-spacer { flex: 1; }
+  .mm-clock { font-family: var(--font-display); font-size: 22px; color: var(--cyan); letter-spacing: 1px; font-weight: 600; }
+  .mm-conn { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }
+  .mm-conn .led { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .mm-conn.live .led { background: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
+
+  /* ---- Main Grid ---- */
+  .mm-grid { position: relative; z-index: 2; display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; }
+  .mm-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    backdrop-filter: blur(15px);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+  .mm-panel-title {
+    font-family: var(--font-display); font-weight: 600; font-size: 14px;
+    letter-spacing: 1.5px; text-transform: uppercase; color: var(--cyan);
+    padding: 14px 18px; display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0, 240, 255, 0.02);
+  }
+  .mm-panel-title .n { margin-left: auto; font-family: var(--font-mono); color: var(--text-dim); font-size: 12px; }
+
+  #mm-graph-wrap { height: 600px; position: relative; background: rgba(0, 0, 0, 0.2); }
+  #mm-graph-wrap svg { width: 100%; height: 100%; display: block; }
+  
+  /* ---- Waiting State Overlay ---- */
+  .mm-empty-hint {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--text-dim); font-size: 15px; letter-spacing: 1.5px; text-align: center; gap: 15px;
+    z-index: 5; background: rgba(6, 9, 14, 0.95);
+  }
+  .mm-empty-hint .spinner {
+    width: 40px; height: 40px; border: 3px solid rgba(0, 240, 255, 0.1);
+    border-top: 3px solid var(--cyan); border-radius: 50%; animation: mm-spin 1.2s linear infinite;
+  }
+  @keyframes mm-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  .mm-side-col { display: flex; flex-direction: column; gap: 14px; }
+  .mm-scroll { overflow-y: auto; }
+  .mm-scroll::-webkit-scrollbar { width: 6px; }
+  .mm-scroll::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.15); border-radius: 4px; }
+  .mm-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.3); }
+
+  /* ---- Interactive Controls ---- */
+  .mm-select, .mm-input {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 12px; border-radius: 6px; font-family: var(--font-mono); font-size: 11px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .mm-select:focus, .mm-input:focus { border-color: var(--cyan); }
+  .mm-btn {
+    background: var(--blue); border: none; color: white; padding: 6px 14px;
+    border-radius: 6px; font-family: var(--font-display); font-weight: 600;
+    font-size: 12px; cursor: pointer; transition: background 0.2s, box-shadow 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .mm-btn:disabled { background: var(--text-faint); cursor: not-allowed; box-shadow: none; }
+  .mm-btn:hover:not(:disabled) { background: #1a75ff; box-shadow: 0 0 10px rgba(0, 102, 255, 0.4); }
+
+  /* ---- Bottom Panels ---- */
+  .mm-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  #mm-timeline, #mm-packets { height: 260px; padding: 12px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .mm-tl-row { display: flex; align-items: baseline; gap: 10px; font-size: 11.5px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+  .mm-tl-time { color: var(--text-faint); font-family: var(--font-mono); flex-shrink: 0; }
+  .mm-tl-icon { flex-shrink: 0; }
+  .mm-tl-text { color: var(--text-dim); }
+  .mm-tl-text b { color: var(--text); }
+  .mm-pk-row { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--text-dim); }
+  .mm-pk-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ---- Device Status Card & List ---- */
+  #mm-devices { height: 260px; display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+  .mm-dev-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: border-color 0.25s, background 0.25s;
+  }
+  .mm-dev-card:hover { border-color: var(--cyan); background: rgba(0, 240, 255, 0.03); }
+  .mm-dev-card.selected { border-color: var(--cyan); background: rgba(0, 240, 255, 0.06); box-shadow: 0 0 8px rgba(0, 240, 255, 0.15); }
+  .mm-dev-card.status-offline { opacity: 0.5; }
+  .mm-dev-icon { font-size: 20px; width: 24px; text-align: center; }
+  .mm-dev-main { flex: 1; min-width: 0; }
+  .mm-dev-id { font-size: 12.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mm-dev-sub { font-size: 10px; color: var(--text-dim); margin-top: 3px; display: flex; gap: 10px; }
+  .mm-led { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .mm-led.online { background: var(--emerald); box-shadow: 0 0 6px var(--emerald); }
+  .mm-led.warn { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .mm-led.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .mm-led.disconnected { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+
+  /* ---- AI Intelligence Panel ---- */
+  .mm-ai-filters { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.1); }
+  #mm-ai-feed { height: 260px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .mm-ai-card {
+    background: rgba(189, 0, 255, 0.03); border: 1px solid rgba(189, 0, 255, 0.2);
+    border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .mm-ai-top { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-dim); }
+  .mm-ai-top b { color: var(--violet); }
+  .mm-ai-msg { font-size: 12px; color: var(--text); line-height: 1.4; }
+  .mm-ai-meta { font-size: 10px; color: var(--text-faint); display: flex; gap: 12px; }
+
+  /* ---- Device Inspector Drawer ---- */
+  .mm-double-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+  #mm-inspector { height: 240px; padding: 12px 16px; }
+  .mm-insp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 11px; }
+  .mm-insp-label { color: var(--text-dim); }
+  .mm-insp-val { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---- Network Analytics Panel ---- */
+  #mm-analytics { height: 350px; padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .mm-an-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mm-an-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; }
+  .mm-an-v { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--cyan); }
+  .mm-an-l { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .mm-chart-col { display: flex; flex-direction: column; gap: 10px; }
+  .mm-bar-wrap { display: flex; align-items: center; gap: 8px; font-size: 10px; }
+  .mm-bar-label { width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mm-bar-outer { flex: 1; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+  .mm-bar-inner { height: 100%; background: var(--cyan); border-radius: 3px; }
+
+  /* ---- GPU accelerated SVG nodes styling ---- */
+  @keyframes node-pulse-red {
+    0%, 100% { filter: drop-shadow(0 0 2px var(--red)); opacity: 0.9; }
+    50% { filter: drop-shadow(0 0 14px var(--red)); opacity: 1; }
+  }
+  @keyframes node-pulse-orange {
+    0%, 100% { filter: drop-shadow(0 0 2px var(--orange)); opacity: 0.9; }
+    50% { filter: drop-shadow(0 0 14px var(--orange)); opacity: 1; }
+  }
+  @keyframes node-pulse-violet {
+    0%, 100% { filter: drop-shadow(0 0 2px var(--violet)); opacity: 0.9; }
+    50% { filter: drop-shadow(0 0 14px var(--violet)); opacity: 1; }
+  }
+  @keyframes battery-pulse {
+    0%, 100% { stroke: var(--amber); }
+    50% { stroke: var(--red); }
+  }
+  .pulse-node-red { animation: node-pulse-red 1.2s infinite; }
+  .pulse-node-orange { animation: node-pulse-orange 1.2s infinite; }
+  .pulse-node-violet { animation: node-pulse-violet 1.2s infinite; }
+  .pulse-battery { animation: battery-pulse 0.8s infinite; }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+(function() {
+  const WS_URL = "__WS_URL__";
+  const root = document.getElementById("meshmind-root");
+
+  root.innerHTML += `
+    <div class="mm-header">
+      <div class="mm-logo"><span class="dot"></span>MESH<b>MIND</b> Observer</div>
+      <div class="mm-stat"><div class="v" id="mm-s-nodes">0</div><div class="l">Active Nodes</div></div>
+      <div class="mm-stat"><div class="v" id="mm-s-gateways">0</div><div class="l">Gateways</div></div>
+      <div class="mm-stat"><div class="v" id="mm-s-emerg" style="color:var(--red)">0</div><div class="l">Emergencies</div></div>
+      <div class="mm-stat"><div class="v" id="mm-s-rate">0.0</div><div class="l">Bandwidth/Min</div></div>
+      <div class="mm-stat"><div class="v" id="mm-s-health" style="color:var(--emerald)">--%</div><div class="l">Delivery Success</div></div>
+      <div class="mm-spacer"></div>
+      <div class="mm-conn" id="mm-conn"><span class="led"></span><span id="mm-conn-text">connecting…</span></div>
+      <div class="mm-clock" id="mm-clock">--:--:--</div>
+    </div>
+
+    <div class="mm-grid">
+      <!-- Left Column: Graph Visualizer -->
+      <div class="mm-panel">
+        <div class="mm-panel-title">Real-Time Mesh Network Topology<span class="n" id="mm-graph-count"></span></div>
+        <div id="mm-graph-wrap">
+          <div class="mm-empty-hint" id="mm-graph-hint">
+            <div class="spinner"></div>
+            <div>Waiting for Mesh Network...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Status Panels -->
+      <div class="mm-side-col">
+        <div class="mm-panel">
+          <div class="mm-panel-title">Mesh Node Catalog</div>
+          <div id="mm-devices" class="mm-scroll"></div>
+        </div>
+
+        <div class="mm-panel">
+          <div class="mm-panel-title">AI Intelligence panel</div>
+          <div class="mm-ai-filters">
+            <select id="mm-ai-filter-class" class="mm-select">
+              <option value="all">All Category Classes</option>
+              <option value="fire">Fire</option>
+              <option value="flood">Flood</option>
+              <option value="medical_emergency">Medical Emergency</option>
+              <option value="sos">SOS Button Trigger</option>
+            </select>
+            <select id="mm-ai-filter-conf" class="mm-select">
+              <option value="0">Min Confidence</option>
+              <option value="0.7">> 70%</option>
+              <option value="0.9">> 90%</option>
+            </select>
+          </div>
+          <div id="mm-ai-feed" class="mm-scroll"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Double Row: Inspector and Routing Replay -->
+    <div class="mm-double-row">
+      <div class="mm-panel">
+        <div class="mm-panel-title">Device Inspector <span id="mm-insp-node-badge" style="margin-left: 10px; color: var(--cyan); font-size:12px;"></span></div>
+        <div id="mm-inspector" class="mm-scroll">
+          <div class="mm-empty-hint" id="mm-insp-hint" style="position:static; background:none;">
+            Click a node in the mesh graph above to inspect metrics.
+          </div>
+          <div id="mm-insp-content" class="mm-insp-grid" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="mm-panel">
+        <div class="mm-panel-title">Routing Path Visualization</div>
+        <div id="mm-routing" style="padding:16px; display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; gap:8px;">
+            <select id="mm-routing-packet-select" class="mm-select" style="flex:1;">
+              <option value="">Select routed message to replay...</option>
+            </select>
+            <button id="mm-routing-play-btn" class="mm-btn" disabled>Animate Journey</button>
+          </div>
+          <div id="mm-routing-path-details" style="font-size:11px; color:var(--text-dim); line-height:1.5;">
+            Select a packet to inspect hop routing details, duplicate suppressions, or retransmission updates.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Row -->
+    <div class="mm-panel" style="margin-top: 14px;">
+      <div class="mm-panel-title">Network Analytics</div>
+      <div id="mm-analytics">
+        <div class="mm-an-grid">
+          <div class="mm-an-card"><div class="v" id="mm-an-success">100%</div><div class="l">Delivery Success Rate</div></div>
+          <div class="mm-an-card"><div class="v" id="mm-an-loss">0%</div><div class="l">Packet Loss Ratio</div></div>
+          <div class="mm-an-card"><div class="v" id="mm-an-latency">45ms</div><div class="l">End-to-End Latency</div></div>
+          <div class="mm-an-card"><div class="v" id="mm-an-hops">1.0</div><div class="l">Average Hop Count</div></div>
+          <div class="mm-an-card"><div class="v" id="mm-an-retrans">0%</div><div class="l">Retransmission Rate</div></div>
+          <div class="mm-an-card"><div class="v" id="mm-an-diameter">0</div><div class="l">Network Diameter</div></div>
+        </div>
+        <div class="mm-chart-col">
+          <div style="font-size: 11px; color: var(--cyan); margin-bottom: 6px; text-transform: uppercase;">Battery Distribution</div>
+          <div id="mm-battery-bars" class="mm-scroll" style="max-height:130px; display:flex; flex-direction:column; gap:6px;"></div>
+          <div style="font-size: 11px; color: var(--cyan); margin-top: 12px; margin-bottom: 6px; text-transform: uppercase;">Link Quality Heatmap</div>
+          <div id="mm-link-heatmap" class="mm-scroll" style="max-height:130px; display:flex; flex-direction:column; gap:4px; font-size:10px; color:var(--text-dim);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Row: Timeline + Logs -->
+    <div class="mm-bottom">
+      <div class="mm-panel">
+        <div class="mm-panel-title">Mesh Network Event Audit Timeline</div>
+        <div id="mm-timeline" class="mm-scroll"></div>
+      </div>
+      <div class="mm-panel">
+        <div class="mm-panel-title">Live Packet Stream Log</div>
+        <div id="mm-packets" class="mm-scroll"></div>
+      </div>
+    </div>
+  `;
+
+  // ---------------------------------------------------------------------
+  // Client state structures
+  // ---------------------------------------------------------------------
+  let nodesById = {};
+  let linksByKey = {};
+  let selectedNodeId = null;
+  let routedPackets = [];
+  let aiPredictions = [];
+
+  const DEVICE_ICON = { android_phone: "📱", arduino_uno_q: "🔌", gateway: "🌐", ai_pc: "🖥&nbsp;", internet_uplink: "📡", unknown: "❓" };
+  const EMERGENCY_ICON = { fire: "🔥", flood: "🌊", earthquake: "🌎", storm: "🌪️", medical_emergency: "🚑", security_threat: "🛡️", building_collapse: "🏚️", infrastructure_failure: "⚠️", none: "•" };
+  const EVENT_ICON = {
+    node_joined: "🟢", node_rejoined: "🟢", node_left: "⚪", node_timed_out: "🔴",
+    edge_established: "🔗", route_update: "🔀", emergency_detected: "🚨", sos: "🆘",
+    ai_classification: "🧠", packet_retransmission: "🔄", duplicate_suppressed: "🛡️",
+    packet_acknowledgement: "✅", sensor_alarm: "🔥"
+  };
+  const PACKET_COLOR = {
+    chat: "#0066ff", heartbeat: "#00ff66", emergency: "#ff6600",
+    sos: "#ff003c", routing: "#a0aec0", sensor: "#ffb300"
+  };
+
+  function fmtTime(ts) {
+    if (!ts) return "--:--:--";
+    const d = new Date(ts * 1000);
+    return d.toLocaleTimeString([], { hour12: false });
+  }
+
+  // ---------------------------------------------------------------------
+  // D3 force simulation configurations
+  // ---------------------------------------------------------------------
+  const graphWrap = document.getElementById("mm-graph-wrap");
+  const svg = d3.select(graphWrap).append("svg");
+  const defs = svg.append("defs");
+
+  // Create SVG filters for beautiful status glows
+  ["cyan", "emerald", "amber", "red", "violet"].forEach(name => {
+    const color = { cyan: "#00f0ff", emerald: "#00ff66", amber: "#ffb300", red: "#ff003c", violet: "#bd00ff" }[name];
+    const f = defs.append("filter").attr("id", "glow-" + name).attr("x", "-100%").attr("y", "-100%").attr("width", "300%").attr("height", "300%");
+    f.append("feGaussianBlur").attr("stdDeviation", 5).attr("result", "blur");
+    const merge = f.append("feMerge");
+    merge.append("feMergeNode").attr("in", "blur");
+    merge.append("feMergeNode").attr("in", "SourceGraphic");
+  });
+
+  const zoomLayer = svg.append("g").attr("class", "zoom-layer");
+  svg.call(d3.zoom().scaleExtent([0.3, 3]).on("zoom", (ev) => zoomLayer.attr("transform", ev.transform)));
+
+  const linkLayer = zoomLayer.append("g").attr("class", "links");
+  const routeHighlightLayer = zoomLayer.append("g").attr("class", "route-highlights");
+  const particleLayer = zoomLayer.append("g").attr("class", "particles");
+  const nodeLayer = zoomLayer.append("g").attr("class", "nodes");
+  const rippleLayer = zoomLayer.append("g").attr("class", "ripples");
+
+  let simNodes = [];
+  let simLinks = [];
+  let prevNodeIdsStr = "";
+  let prevLinkKeysStr = "";
+
+  function getGraphSize() {
+    const r = graphWrap.getBoundingClientRect();
+    return { w: r.width || 800, h: r.height || 600 };
+  }
+  let sz = getGraphSize();
+  svg.attr("viewBox", `0 0 ${sz.w} ${sz.h}`);
+
+  const simulation = d3.forceSimulation(simNodes)
+    .force("link", d3.forceLink(simLinks).id(d => d.node_id).distance(140).strength(0.4))
+    .force("charge", d3.forceManyBody().strength(-300))
+    .force("center", d3.forceCenter(sz.w / 2, sz.h / 2))
+    .force("collide", d3.forceCollide(36))
+    .alphaDecay(0.015)
+    .on("tick", ticked);
+
+  function rebuildSimulationArrays() {
+    const nodeArr = Object.values(nodesById);
+    const nodeIds = nodeArr.map(n => n.node_id).sort();
+    const nodeIdsStr = nodeIds.join(",");
+
+    const idSet = new Set(nodeIds);
+    const linkArr = Object.values(linksByKey).filter(l => idSet.has(l.a) && idSet.has(l.b));
+    const linkKeysStr = linkArr.map(l => l.a + "|" + l.b).sort().join(",");
+
+    const isTopologyChanged = (nodeIdsStr !== prevNodeIdsStr) || (linkKeysStr !== prevLinkKeysStr);
+
+    const existingById = new Map(simNodes.map(n => [n.node_id, n]));
+    simNodes = nodeArr.map(n => {
+      const prev = existingById.get(n.node_id);
+      return Object.assign(prev ? { x: prev.x, y: prev.y, vx: prev.vx, vy: prev.vy } : {}, n);
+    });
+
+    simLinks = linkArr.map(l => ({ ...l, source: l.a, target: l.b }));
+
+    if (isTopologyChanged) {
+      prevNodeIdsStr = nodeIdsStr;
+      prevLinkKeysStr = linkKeysStr;
+
+      simulation.nodes(simNodes);
+      simulation.force("link").links(simLinks);
+      simulation.alpha(0.15).restart();
+    }
+
+    renderGraph();
+  }
+
+  let linkSel, nodeSel;
+
+  function renderGraph() {
+    const activeLength = simNodes.filter(n => n.status === "online").length;
+    document.getElementById("mm-graph-hint").style.display = activeLength ? "none" : "flex";
+    document.getElementById("mm-graph-count").textContent = activeLength ? `${activeLength} active nodes` : "";
+
+    linkSel = linkLayer.selectAll("line").data(simLinks, d => d.a + "|" + d.b);
+    linkSel.exit().remove();
+    const linkEnter = linkSel.enter().append("line").attr("stroke-width", 1.5).style("opacity", 0.5);
+    linkSel = linkEnter.merge(linkSel);
+    linkSel
+      .attr("stroke", d => d.quality === "healthy" ? "var(--emerald)" : d.quality === "weak" ? "var(--amber)" : "var(--red)")
+      .attr("stroke-width", d => d.quality === "healthy" ? 2.5 : 1.2)
+      .style("opacity", d => d.quality === "broken" ? 0.2 : 0.85);
+
+    nodeSel = nodeLayer.selectAll("g.node").data(simNodes, d => d.node_id);
+    nodeSel.exit().remove();
+
+    const nodeEnter = nodeSel.enter().append("g").attr("class", "node")
+      .call(d3.drag()
+        .on("start", (ev, d) => { if (!ev.active) simulation.alphaTarget(0.1).restart(); d.fx = d.x; d.fy = d.y; })
+        .on("drag", (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+        .on("end", (ev, d) => { if (!ev.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }))
+      .on("click", (ev, d) => { inspectNode(d.node_id); });
+
+    nodeEnter.append("circle").attr("class", "ring").attr("r", 20);
+    nodeEnter.append("circle").attr("class", "core").attr("r", 15).attr("fill", "var(--void)");
+    nodeEnter.append("text").attr("class", "icon").attr("text-anchor", "middle").attr("dy", "0.35em").attr("font-size", 16);
+    nodeEnter.append("text").attr("class", "label").attr("text-anchor", "middle").attr("dy", 35)
+      .attr("font-family", "var(--font-mono)").attr("font-size", 10).attr("fill", "var(--text-dim)");
+
+    nodeSel = nodeEnter.merge(nodeSel);
+
+    // Apply glowing classes depending on node status dynamically
+    nodeSel.select("circle.ring")
+      .attr("class", d => {
+        let cls = "ring";
+        if (d.sensor_alarm) cls += " pulse-node-red";
+        else if (d.emergency_active) cls += " pulse-node-orange";
+        else if (d.ai_active) cls += " pulse-node-violet";
+        else if (d.low_battery) cls += " pulse-battery";
+        return cls;
+      })
+      .attr("stroke", d => {
+        if (d.status === "offline") return "var(--text-faint)";
+        if (d.sensor_alarm) return "var(--red)";
+        if (d.emergency_active) return "var(--orange)";
+        if (d.device_type === "gateway") return "var(--cyan)";
+        return "var(--emerald)";
+      })
+      .attr("stroke-width", 2.2)
+      .attr("filter", d => {
+        if (d.status === "offline") return "none";
+        if (d.sensor_alarm) return "url(#glow-red)";
+        if (d.emergency_active) return "url(#glow-red)";
+        if (d.device_type === "gateway") return "url(#glow-cyan)";
+        return "url(#glow-emerald)";
+      });
+
+    nodeSel.select("text.icon").html(d => DEVICE_ICON[d.device_type] || DEVICE_ICON.unknown);
+    nodeSel.select("text.label").text(d => d.node_id);
+  }
+
+  function ticked() {
+    linkSel && linkSel
+      .attr("x1", d => d.source.x || 0).attr("y1", d => d.source.y || 0)
+      .attr("x2", d => d.target.x || 0).attr("y2", d => d.target.y || 0);
+    nodeSel && nodeSel.attr("transform", d => `translate(${d.x || sz.w / 2},${d.y || sz.h / 2})`);
+  }
+
+  function findNodeXY(nodeId) {
+    const n = simNodes.find(n => n.node_id === nodeId);
+    return n ? { x: n.x, y: n.y } : null;
+  }
+
+  function heartbeatRipple(nodeId) {
+    const pos = findNodeXY(nodeId);
+    if (!pos) return;
+    const c = rippleLayer.append("circle")
+      .attr("cx", pos.x).attr("cy", pos.y).attr("r", 15)
+      .attr("fill", "none").attr("stroke", "var(--cyan)").attr("stroke-width", 1.5).style("opacity", 0.8);
+    c.transition().duration(800).ease(d3.easeCubicOut)
+      .attr("r", 40).style("opacity", 0).remove();
+  }
+
+  // ---------------------------------------------------------------------
+  // Dynamic Route Line Highlights and Particle Animations
+  // ---------------------------------------------------------------------
+  let activeRouteHighlight = null;
+
+  function highlightRoutePath(route, color) {
+    if (activeRouteHighlight) activeRouteHighlight.remove();
+    if (!route || route.length < 2) return;
+    
+    const points = route.map(nid => findNodeXY(nid)).filter(Boolean);
+    if (points.length < 2) return;
+    
+    const lineGenerator = d3.line().x(d => d.x).y(d => d.y);
+    
+    activeRouteHighlight = routeHighlightLayer.append("path")
+      .datum(points)
+      .attr("fill", "none")
+      .attr("stroke", color || "var(--cyan)")
+      .attr("stroke-width", 3.5)
+      .attr("stroke-dasharray", "10,5")
+      .attr("filter", "url(#glow-cyan)")
+      .style("opacity", 0.95)
+      .attr("d", lineGenerator);
+      
+    let offset = 0;
+    function animateDash() {
+      if (!activeRouteHighlight) return;
+      offset -= 1.5;
+      activeRouteHighlight.attr("stroke-dashoffset", offset);
+      requestAnimationFrame(animateDash);
+    }
+    animateDash();
+    
+    activeRouteHighlight.transition().delay(5000).duration(1000).style("opacity", 0).remove().on("end", () => {
+      activeRouteHighlight = null;
+    });
+  }
+
+  function animatePacketAlongRoute(entry) {
+    const route = entry.route || [];
+    if (route.length < 2) return;
+    
+    const color = PACKET_COLOR[entry.packet_type] || "var(--blue)";
+    const hopDuration = Math.max(150, Math.min(800, entry.latency_ms || 350));
+    let hop = 0;
+
+    const dot = particleLayer.append("circle").attr("r", 5).attr("fill", color)
+      .attr("filter", entry.packet_type === "sos" || entry.predicted_category !== "none" ? "url(#glow-red)" : "url(#glow-cyan)");
+
+    function nextHop() {
+      if (hop >= route.length - 1) { dot.remove(); return; }
+      const a = findNodeXY(route[hop]);
+      const b = findNodeXY(route[hop + 1]);
+      hop++;
+      if (!a || !b) { dot.remove(); return; }
+      dot.attr("cx", a.x).attr("cy", a.y);
+      dot.transition().duration(hopDuration).ease(d3.easeLinear)
+        .attr("cx", b.x).attr("cy", b.y)
+        .on("end", nextHop);
+    }
+    nextHop();
+  }
+
+  // ---------------------------------------------------------------------
+  // Device Inspector details builder
+  // ---------------------------------------------------------------------
+  function inspectNode(nodeId) {
+    selectedNodeId = nodeId;
+    const node = nodesById[nodeId];
+    document.getElementById("mm-insp-node-badge").textContent = nodeId;
+    
+    const content = document.getElementById("mm-insp-content");
+    const hint = document.getElementById("mm-insp-hint");
+    
+    if (!node) {
+      hint.style.display = "flex";
+      content.style.display = "none";
+      return;
+    }
+
+    hint.style.display = "none";
+    content.style.display = "grid";
+
+    let sensorsHTML = "";
+    if (node.sensors) {
+      sensorsHTML = `
+        <div class="mm-insp-label">Sensor readouts:</div>
+        <div class="mm-insp-val" style="color:var(--amber)">
+          Smoke: ${node.sensors.smoke_level || 0} | Gas: ${node.sensors.gas_level || 0} | Temp: ${node.sensors.temperature_c || 0}°C
+        </div>
+      `;
+    }
+
+    content.innerHTML = `
+      <div class="mm-insp-label">Node ID:</div>
+      <div class="mm-insp-val">${node.node_id}</div>
+      <div class="mm-insp-label">Hardware Profile:</div>
+      <div class="mm-insp-val" style="color:var(--cyan)">${(node.device_type || "Unknown").toUpperCase()}</div>
+      <div class="mm-insp-label">Battery Level:</div>
+      <div class="mm-insp-val">${node.battery_pct != null ? node.battery_pct + "%" : "N/A"}</div>
+      <div class="mm-insp-label">Link RSSI:</div>
+      <div class="mm-insp-val">${node.signal_strength_dbm != null ? node.signal_strength_dbm + " dBm" : "N/A"}</div>
+      <div class="mm-insp-label">BLE Neighbors:</div>
+      <div class="mm-insp-val">${(node.ble_neighbors || []).join(", ") || "none"}</div>
+      <div class="mm-insp-label">Wi-Fi Direct Peers:</div>
+      <div class="mm-insp-val">${(node.wifi_direct_peers || []).join(", ") || "none"}</div>
+      <div class="mm-insp-label">AI Predictions:</div>
+      <div class="mm-insp-val" style="color:var(--violet)">${node.ai_inference_count || 0} classifications</div>
+      <div class="mm-insp-label">Uptime Metric:</div>
+      <div class="mm-insp-val">${Math.round(node.last_seen - node.first_seen)}s</div>
+      <div class="mm-insp-label">System Performance:</div>
+      <div class="mm-insp-val">CPU: ${node.cpu_usage || "N/A"}% | MEM: ${node.memory_usage || "N/A"}%</div>
+      ${sensorsHTML}
+    `;
+
+    // Highlight selected node card
+    d3.selectAll(".mm-dev-card").classed("selected", false);
+    d3.select(`#card-${nodeId}`).classed("selected", true);
+  }
+
+  // ---------------------------------------------------------------------
+  // AI feed rendering
+  // ---------------------------------------------------------------------
+  function renderAIPredictions() {
+    const filterClass = document.getElementById("mm-ai-filter-class").value;
+    const filterConf = parseFloat(document.getElementById("mm-ai-filter-conf").value);
+
+    const filtered = aiPredictions.filter(p => {
+      if (filterClass !== "all") {
+        if (filterClass === "sos" && !p.is_sos) return false;
+        if (filterClass !== "sos" && p.predicted_category !== filterClass) return false;
+      }
+      if (p.confidence_score < filterConf) return false;
+      return true;
+    });
+
+    const feed = d3.select("#mm-ai-feed");
+    feed.selectAll("*").remove();
+
+    if (!filtered.length) {
+      feed.append("div").attr("class", "mm-empty-hint").style("position","static").style("background","none")
+        .text("No classified AI classifications match filters.");
+      return;
+    }
+
+    filtered.forEach(p => {
+      const card = feed.append("div").attr("class", "mm-ai-card");
+      card.html(`
+        <div class="mm-ai-top">
+          <b>🧠 MINI-LM Prediction: ${(p.predicted_category || "Emergency").toUpperCase()}</b>
+          <span>Score: ${Math.round(p.confidence_score * 100)}%</span>
+        </div>
+        <div class="mm-ai-msg">"${p.message}"</div>
+        <div class="mm-ai-meta">
+          <span>Node: ${p.node_id}</span>
+          <span>Latency: ${p.latency_ms || 120}ms</span>
+          <span>Status: ${p.delivery_status || "Delivered"}</span>
+        </div>
+      `);
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Routing Visualization controls
+  // ---------------------------------------------------------------------
+  const routingSelect = document.getElementById("mm-routing-packet-select");
+  const routingPlayBtn = document.getElementById("mm-routing-play-btn");
+
+  routingSelect.addEventListener("change", () => {
+    const selectedId = routingSelect.value;
+    if (selectedId) {
+      routingPlayBtn.removeAttribute("disabled");
+      const pkt = routedPackets.find(p => p.packet_id === selectedId);
+      if (pkt) {
+        document.getElementById("mm-routing-path-details").innerHTML = `
+          <strong>Type:</strong> ${pkt.packet_type.toUpperCase()}<br/>
+          <strong>Source:</strong> ${pkt.sender_id} | <strong>Target:</strong> ${pkt.destination_id || "All"}<br/>
+          <strong>Route hops:</strong> ${pkt.route.join(" ➔ ") || "Direct broadcast"}<br/>
+          <strong>Delivery Status:</strong> <span style="color:var(--emerald)">${pkt.delivery_status}</span>
+        `;
+      }
+    } else {
+      routingPlayBtn.setAttribute("disabled", "true");
+      document.getElementById("mm-routing-path-details").textContent = "Select a packet to inspect hop routing details.";
+    }
+  });
+
+  routingPlayBtn.addEventListener("click", () => {
+    const selectedId = routingSelect.value;
+    const pkt = routedPackets.find(p => p.packet_id === selectedId);
+    if (pkt) {
+      highlightRoutePath(pkt.route, PACKET_COLOR[pkt.packet_type]);
+      animatePacketAlongRoute(pkt);
+    }
+  });
+
+  function updateRoutingDropdown() {
+    const prevVal = routingSelect.value;
+    routingSelect.innerHTML = `<option value="">Select routed message to replay...</option>`;
+    routedPackets.forEach(p => {
+      const option = document.createElement("option");
+      option.value = p.packet_id;
+      option.textContent = `[${p.packet_type.toUpperCase()}] ${p.packet_id.slice(-8)} (Hops: ${p.route.length})`;
+      routingSelect.appendChild(option);
+    });
+    routingSelect.value = prevVal;
+  }
+
+  // ---------------------------------------------------------------------
+  // Stats and Side Catalogs Rendering
+  // ---------------------------------------------------------------------
+  function renderNodeCatalog() {
+    const catalog = d3.select("#mm-devices");
+    catalog.selectAll("*").remove();
+
+    const list = Object.values(nodesById);
+    if (!list.length) {
+      catalog.append("div").attr("class", "mm-empty-hint").style("position","static").style("background","none")
+        .text("No active mesh nodes online.");
+      return;
+    }
+
+    list.forEach(node => {
+      const card = catalog.append("div")
+        .attr("class", `mm-dev-card ${node.node_id === selectedNodeId ? "selected" : ""} status-${node.status}`)
+        .attr("id", `card-${node.node_id}`)
+        .on("click", () => inspectNode(node.node_id));
+
+      const lowBattery = node.battery_pct != null && node.battery_pct < 20;
+      let ledClass = "online";
+      if (node.status === "offline") ledClass = "offline";
+      else if (node.status === "disconnected") ledClass = "disconnected";
+      else if (lowBattery || node.sensor_alarm) ledClass = "warn";
+
+      card.html(`
+        <div class="mm-dev-icon">${DEVICE_ICON[node.device_type] || DEVICE_ICON.unknown}</div>
+        <div class="mm-dev-main">
+          <div class="mm-dev-id">${node.node_id}</div>
+          <div class="mm-dev-sub">
+            <span>🔋 ${node.battery_pct != null ? node.battery_pct + "%" : "N/A"}</span>
+            <span>📶 ${node.signal_strength_dbm != null ? node.signal_strength_dbm + "dBm" : "N/A"}</span>
+            <span>Hops: ${node.packets_relayed}</span>
+          </div>
+        </div>
+        <span class="mm-led ${ledClass}"></span>
+      `);
+    });
+  }
+
+  function renderAnalyticsBars(snap) {
+    // Battery Distribution
+    const barsContainer = d3.select("#mm-battery-bars");
+    barsContainer.selectAll("*").remove();
+    
+    const activeNodes = Object.values(nodesById).filter(n => n.status === "online");
+    if (!activeNodes.length) {
+      barsContainer.append("div").text("No battery telemetry streamed.").style("font-size","10px");
+    } else {
+      activeNodes.forEach(node => {
+        const bat = node.battery_pct != null ? node.battery_pct : 0;
+        const color = bat < 20 ? "var(--red)" : bat < 55 ? "var(--amber)" : "var(--emerald)";
+        const barWrap = barsContainer.append("div").attr("class", "mm-bar-wrap");
+        barWrap.html(`
+          <div class="mm-bar-label">${node.node_id}</div>
+          <div class="mm-bar-outer">
+            <div class="mm-bar-inner" style="width:${bat}%; background:${color}"></div>
+          </div>
+          <div style="width:30px; text-align:right;">${bat}%</div>
+        `);
+      });
+    }
+
+    // Link Qualities Heatmap
+    const heatContainer = d3.select("#mm-link-heatmap");
+    heatContainer.selectAll("*").remove();
+    
+    const activeEdges = Object.values(linksByKey);
+    if (!activeEdges.length) {
+      heatContainer.append("div").text("No active mesh connections discovered.").style("font-size","10px");
+    } else {
+      activeEdges.forEach(edge => {
+        const qualityColor = edge.quality === "healthy" ? "var(--emerald)" : edge.quality === "weak" ? "var(--amber)" : "var(--red)";
+        heatContainer.append("div").html(`
+          <span>${edge.a} ⟷ ${edge.b} : </span>
+          <span style="color:${qualityColor}; font-weight:600;">${edge.quality.toUpperCase()}</span>
+          <span> (${edge.signal_strength_dbm || -75}dBm, freq: ${edge.comm_count || 1})</span>
+        `);
+      });
+    }
+  }
+
+  function updateAnalyticsWidget(stats) {
+    document.getElementById("mm-s-nodes").textContent = stats.active_nodes ?? 0;
+    document.getElementById("mm-s-gateways").textContent = stats.active_gateways ?? 0;
+    document.getElementById("mm-s-emerg").textContent = stats.active_emergencies ?? 0;
+    document.getElementById("mm-s-rate").textContent = (stats.bandwidth_utilization ?? 0) + " / min";
+    document.getElementById("mm-s-health").textContent = (stats.delivery_success_rate ?? 100) + "%";
+
+    // Update Analytics block
+    document.getElementById("mm-an-success").textContent = (stats.delivery_success_rate ?? 100) + "%";
+    document.getElementById("mm-an-loss").textContent = (stats.packet_loss_percentage ?? 0) + "%";
+    document.getElementById("mm-an-latency").textContent = (stats.end_to_end_latency ?? 45) + "ms";
+    document.getElementById("mm-an-hops").textContent = (stats.average_hop_count ?? 1.0).toFixed(1);
+    document.getElementById("mm-an-retrans").textContent = (stats.retransmission_frequency ?? 0) + "%";
+    document.getElementById("mm-an-diameter").textContent = stats.network_diameter ?? 0;
+  }
+
+  // ---------------------------------------------------------------------
+  // Event Timeline + Live Log
+  // ---------------------------------------------------------------------
+  function renderEventTimeline(list) {
+    const timeline = d3.select("#mm-timeline");
+    timeline.selectAll("*").remove();
+    list.slice(-50).reverse().forEach(ev => {
+      const row = timeline.append("div").attr("class", "mm-tl-row");
+      row.html(`
+        <span class="mm-tl-time">${fmtTime(ev.timestamp)}</span>
+        <span class="mm-tl-icon">${EVENT_ICON[ev.event_type] || "•"}</span>
+        <span class="mm-tl-text">
+          <b>${(ev.event_type || "").toUpperCase().replace(/_/g, " ")}</b>
+          ${ev.node_id ? " ➔ Node: " + ev.node_id : ""}
+        </span>
+      `);
+    });
+  }
+
+  function renderPacketLog(list) {
+    const pLog = d3.select("#mm-packets");
+    pLog.selectAll("*").remove();
+    list.slice(-50).reverse().forEach(p => {
+      const row = pLog.append("div").attr("class", "mm-pk-row");
+      row.html(`
+        <span class="mm-pk-dot" style="background:${PACKET_COLOR[p.packet_type] || "var(--blue)"}"></span>
+        <span>[${p.packet_type.toUpperCase()}] ${p.sender_id} ➔ ${p.destination_id || "All"} | Latency: ${p.latency_ms || 0}ms | Status: ${p.delivery_status}</span>
+      `);
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // WebSocket Client (Auto Reconnect, Mirror state exactly)
+  // ---------------------------------------------------------------------
+  function setConnectionLive(live) {
+    const el = document.getElementById("mm-conn");
+    document.getElementById("mm-conn-text").textContent = live ? "live" : "reconnecting…";
+    el.className = "mm-conn" + (live ? " live" : "");
+  }
+
+  function applySnapshot(snap) {
+    nodesById = snap.nodes || {};
+    linksByKey = {};
+    (snap.edges || []).forEach(e => { linksByKey[e.a + "|" + e.b] = e; });
+    
+    // Extract packet list
+    routedPackets = snap.packet_log || [];
+    aiPredictions = [];
+    (snap.event_timeline || []).forEach(ev => {
+      if (ev.event_type === "ai_classification") {
+        aiPredictions.push({
+          node_id: ev.node_id,
+          confidence_score: ev.detail.confidence_score,
+          predicted_category: ev.detail.predicted_category,
+          message: ev.detail.message,
+          latency_ms: ev.detail.latency_ms,
+          delivery_status: "Delivered",
+          is_sos: ev.event_type === "sos"
+        });
+      }
+    });
+
+    updateAnalyticsWidget(snap.stats || {});
+    rebuildSimulationArrays();
+    renderNodeCatalog();
+    renderAIPredictions();
+    renderEventTimeline(snap.event_timeline || []);
+    renderPacketLog(snap.packet_log || []);
+    renderAnalyticsBars(snap);
+    updateRoutingDropdown();
+  }
+
+  function connect() {
+    let ws;
+    try { ws = new WebSocket(WS_URL); } catch (e) { setTimeout(connect, 3000); return; }
+
+    ws.onopen = () => setConnectionLive(true);
+    ws.onclose = () => { setConnectionLive(false); setTimeout(connect, 3000); };
+    ws.onerror = () => ws.close();
+
+    ws.onmessage = (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      const { type, data } = msg;
+
+      if (type === "snapshot") {
+        applySnapshot(data);
+        return;
+      }
+
+      if (type === "stats") {
+        updateAnalyticsWidget(data);
+      } else if (type === "node_update") {
+        nodesById[data.node_id] = data;
+        rebuildSimulationArrays();
+        renderNodeCatalog();
+        inspectNode(selectedNodeId);
+      } else if (type === "edge_update") {
+        linksByKey[data.a + "|" + data.b] = data;
+        rebuildSimulationArrays();
+        renderAnalyticsBars(null);
+      } else if (type === "node_offline") {
+        if (nodesById[data.node_id]) nodesById[data.node_id].status = "offline";
+        renderGraph(); renderNodeCatalog();
+      } else if (type === "heartbeat_ripple") {
+        heartbeatRipple(data.node_id);
+      } else if (type === "packet") {
+        routedPackets.push(data);
+        if (routedPackets.length > 100) routedPackets.shift();
+        renderPacketLog(routedPackets);
+        animatePacketAlongRoute(data);
+        updateRoutingDropdown();
+      } else if (type === "timeline_event") {
+        // Timeline includes AI predictions
+        if (data.event_type === "ai_classification") {
+          aiPredictions.push({
+            node_id: data.node_id,
+            confidence_score: data.detail.confidence_score,
+            predicted_category: data.detail.predicted_category,
+            message: data.detail.message,
+            latency_ms: data.detail.latency_ms,
+            delivery_status: "Delivered",
+            is_sos: false
+          });
+          if (aiPredictions.length > 100) aiPredictions.shift();
+          renderAIPredictions();
+        } else if (data.event_type === "sos") {
+          aiPredictions.push({
+            node_id: data.node_id,
+            confidence_score: 1.0,
+            predicted_category: "sos",
+            message: data.detail.message || "Manual SOS trigger button pressed.",
+            latency_ms: data.detail.latency_ms || 0,
+            delivery_status: "Delivered",
+            is_sos: true
+          });
+          if (aiPredictions.length > 100) aiPredictions.shift();
+          renderAIPredictions();
+        }
+
+        // Push to general timeline
+        const timelineList = document.getElementById("mm-timeline").children;
+        const timeline = d3.select("#mm-timeline");
+        const row = timeline.insert("div", ":first-child").attr("class", "mm-tl-row");
+        row.html(`
+          <span class="mm-tl-time">${fmtTime(data.timestamp)}</span>
+          <span class="mm-tl-icon">${EVENT_ICON[data.event_type] || "•"}</span>
+          <span class="mm-tl-text">
+            <b>${(data.event_type || "").toUpperCase().replace(/_/g, " ")}</b>
+            ${data.node_id ? " ➔ Node: " + data.node_id : ""}
+          </span>
+        `);
+        if (timelineList.length > 50) timelineList[timelineList.length - 1].remove();
+      }
+    };
+  }
+
+  // Bind dropdown filters
+  document.getElementById("mm-ai-filter-class").addEventListener("change", renderAIPredictions);
+  document.getElementById("mm-ai-filter-conf").addEventListener("change", renderAIPredictions);
+
+  setInterval(() => {
+    document.getElementById("mm-clock").textContent = new Date().toLocaleTimeString([], { hour12: false });
+  }, 1000);
+
+  window.addEventListener("resize", () => {
+    sz = getGraphSize();
+    svg.attr("viewBox", `0 0 ${sz.w} ${sz.h}`);
+    simulation.force("center", d3.forceCenter(sz.w / 2, sz.h / 2));
+  });
+
+  connect();
+})();
+</script>
