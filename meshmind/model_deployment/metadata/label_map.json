@@ -1,0 +1,36 @@
+{
+  "label2id": {
+    "Fire": 0,
+    "Flood": 1,
+    "Earthquake": 2,
+    "Storm": 3,
+    "Building Collapse": 4,
+    "Medical Emergency": 5,
+    "Security Threat": 6,
+    "Chemical Explosion": 7
+  },
+  "id2label": {
+    "0": "Fire",
+    "1": "Flood",
+    "2": "Earthquake",
+    "3": "Storm",
+    "4": "Building Collapse",
+    "5": "Medical Emergency",
+    "6": "Security Threat",
+    "7": "Chemical Explosion"
+  },
+  "full_taxonomy": [
+    "Fire",
+    "Flood",
+    "Earthquake",
+    "Storm",
+    "Building Collapse",
+    "Medical Emergency",
+    "Infrastructure Failure",
+    "Security Threat",
+    "Chemical Explosion"
+  ],
+  "excluded_classes_this_run": [
+    "Infrastructure Failure"
+  ]
+}

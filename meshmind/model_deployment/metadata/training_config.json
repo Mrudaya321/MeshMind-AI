@@ -1,0 +1,12 @@
+{
+  "backbone": "sentence-transformers/all-MiniLM-L6-v2",
+  "seed": 42,
+  "batch_size": 64,
+  "stage1_epochs_run": 8,
+  "stage2_epochs_run": 4,
+  "best_val_macro_f1": 0.9685512373254864,
+  "num_classes": 8,
+  "test_accuracy": 0.9707650941090198,
+  "test_macro_f1": 0.9590445750900009,
+  "test_weighted_f1": 0.9707132457549654
+}

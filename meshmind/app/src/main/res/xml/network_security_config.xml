@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <!-- Strictly block all cleartext HTTP traffic to any external domain -->
+        <domain includeSubdomains="true">meshmind.qualcomm.com</domain>
+    </domain-config>
+</network-security-config>

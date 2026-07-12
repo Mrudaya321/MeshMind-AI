@@ -1,0 +1,11 @@
+{
+    "python": "3.12.13",
+    "torch": "2.11.0+cu128",
+    "transformers": "4.56.1",
+    "onnx": "1.20.1",
+    "onnxruntime": "1.22.1",
+    "device": "cuda",
+    "backbone": "sentence-transformers/all-MiniLM-L6-v2",
+    "export_max_length": 64,
+    "num_classes": 8
+}

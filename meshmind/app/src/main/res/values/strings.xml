@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MeshMind</string>
+    <string name="title_splash">MeshMind Bootloader</string>
+    <string name="title_dashboard">MeshMind Edge Dashboard</string>
+    <string name="title_conversations">Conversations</string>
+    <string name="title_chat_screen">Secure Chat</string>
+    <string name="title_emergency">Emergency Broadcast</string>
+    <string name="title_neighbor_monitor">Neighbor Node Visualizer</string>
+    <string name="title_ai_diagnostics">LiteRT Edge AI Diagnostics</string>
+    <string name="title_digital_twin">Digital Twin Sync</string>
+    <string name="title_packet_inspector">Mesh Frame Inspector</string>
+    <string name="title_telemetry_viewer">Edge Telemetry logs</string>
+    <string name="title_developer_console">Qualcomm Developer Console</string>
+    <string name="title_settings">Mesh Configuration Settings</string>
+    <string name="title_app_logs">Structured System Logs</string>
+    <string name="title_device_diagnostics">Hardware Health Diagnostics</string>
+    <string name="title_about">About MeshMind</string>
+
+    <string name="status_initializing">Initializing edge subsystems...</string>
+    <string name="status_active">Mesh node is active</string>
+    <string name="status_error">Critical System Error</string>
+</resources>

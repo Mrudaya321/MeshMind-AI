@@ -1,0 +1,31 @@
+{
+  "max_length": 64,
+  "url_removed": true,
+  "html_entities_removed": true,
+  "usernames_removed": true,
+  "negations_preserved": true,
+  "operational_keywords_preserved": [
+    "ambulance",
+    "bleeding",
+    "chemical spill",
+    "collapse",
+    "earthquake",
+    "evacuation",
+    "explosion",
+    "fire",
+    "flood",
+    "gas leak",
+    "hurricane",
+    "injured",
+    "looting",
+    "rescue",
+    "security",
+    "shooting",
+    "smoke",
+    "tornado",
+    "transformer failure",
+    "trapped",
+    "tsunami",
+    "unconscious"
+  ]
+}

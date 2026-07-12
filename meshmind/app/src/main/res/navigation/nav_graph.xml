@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/splashFragment">
+
+    <!-- Splash Screen (Bootloader) -->
+    <fragment
+        android:id="@+id/splashFragment"
+        android:name="com.qualcomm.meshmind.ui.SplashFragment"
+        android:label="@string/title_splash"
+        tools:layout="@layout/fragment_splash">
+        <action
+            android:id="@+id/action_splash_to_dashboard"
+            app:destination="@id/dashboardFragment"
+            app:popUpTo="@id/splashFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <!-- Home Dashboard -->
+    <fragment
+        android:id="@+id/dashboardFragment"
+        android:name="com.qualcomm.meshmind.ui.DashboardFragment"
+        android:label="@string/title_dashboard"
+        tools:layout="@layout/fragment_dashboard">
+        <action
+            android:id="@+id/action_dashboard_to_conversations"
+            app:destination="@id/conversationsFragment" />
+        <action
+            android:id="@+id/action_dashboard_to_emergency"
+            app:destination="@id/emergencyFragment" />
+        <action
+            android:id="@+id/action_dashboard_to_neighborMonitor"
+            app:destination="@id/neighborMonitorFragment" />
+        <action
+            android:id="@+id/action_dashboard_to_digitalTwin"
+            app:destination="@id/digitalTwinFragment" />
+        <action
+            android:id="@+id/action_dashboard_to_packetInspector"
+            app:destination="@id/packetInspectorFragment" />
+        <action
+            android:id="@+id/action_dashboard_to_settings"
+            app:destination="@id/settingsFragment" />
+        <action
+            android:id="@+id/action_dashboard_to_developerConsole"
+            app:destination="@id/developerConsoleFragment" />
+    </fragment>
+
+    <!-- Conversations -->
+    <fragment
+        android:id="@+id/conversationsFragment"
+        android:name="com.qualcomm.meshmind.ui.ConversationsFragment"
+        android:label="@string/title_conversations"
+        tools:layout="@layout/fragment_conversations">
+        <action
+            android:id="@+id/action_conversations_to_chatScreen"
+            app:destination="@id/chatScreenFragment" />
+    </fragment>
+
+    <!-- Secure Chat Screen -->
+    <fragment
+        android:id="@+id/chatScreenFragment"
+        android:name="com.qualcomm.meshmind.ui.ChatScreenFragment"
+        android:label="@string/title_chat_screen"
+        tools:layout="@layout/fragment_chat_screen">
+        <argument
+            android:name="conversationId"
+            app:argType="string"
+            android:defaultValue="neighbor_node_1" />
+    </fragment>
+
+    <!-- Emergency Communication -->
+    <fragment
+        android:id="@+id/emergencyFragment"
+        android:name="com.qualcomm.meshmind.ui.EmergencyFragment"
+        android:label="@string/title_emergency"
+        tools:layout="@layout/fragment_generic_placeholder" />
+
+    <!-- Neighbor Monitor Map -->
+    <fragment
+        android:id="@+id/neighborMonitorFragment"
+        android:name="com.qualcomm.meshmind.ui.NeighborMonitorFragment"
+        android:label="@string/title_neighbor_monitor"
+        tools:layout="@layout/fragment_generic_placeholder" />
+
+    <!-- Digital Twin Dashboard -->
+    <fragment
+        android:id="@+id/digitalTwinFragment"
+        android:name="com.qualcomm.meshmind.ui.DigitalTwinFragment"
+        android:label="@string/title_digital_twin"
+        tools:layout="@layout/fragment_generic_placeholder" />
+
+    <!-- Packet Inspector -->
+    <fragment
+        android:id="@+id/packetInspectorFragment"
+        android:name="com.qualcomm.meshmind.ui.PacketInspectorFragment"
+        android:label="@string/title_packet_inspector"
+        tools:layout="@layout/fragment_generic_placeholder" />
+
+    <!-- Telemetry Viewer -->
+    <fragment
+        android:id="@+id/telemetryViewerFragment"
+        android:name="com.qualcomm.meshmind.ui.TelemetryViewerFragment"
+        android:label="@string/title_telemetry_viewer"
+        tools:layout="@layout/fragment_generic_placeholder" />
+
+    <!-- Developer Console -->
+    <fragment
+        android:id="@+id/developerConsoleFragment"
+        android:name="com.qualcomm.meshmind.ui.DeveloperConsoleFragment"
+        android:label="@string/title_developer_console"
+        tools:layout="@layout/fragment_generic_placeholder" />
+
+    <!-- Settings -->
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.qualcomm.meshmind.ui.SettingsFragment"
+        android:label="@string/title_settings"
+        tools:layout="@layout/fragment_generic_placeholder" />
+
+    <!-- Application Logs -->
+    <fragment
+        android:id="@+id/appLogsFragment"
+        android:name="com.qualcomm.meshmind.ui.AppLogsFragment"
+        android:label="@string/title_app_logs"
+        tools:layout="@layout/fragment_generic_placeholder" />
+
+    <!-- Device Diagnostics -->
+    <fragment
+        android:id="@+id/deviceDiagnosticsFragment"
+        android:name="com.qualcomm.meshmind.ui.DeviceDiagnosticsFragment"
+        android:label="@string/title_device_diagnostics"
+        tools:layout="@layout/fragment_generic_placeholder" />
+
+    <!-- About Screen -->
+    <fragment
+        android:id="@+id/aboutFragment"
+        android:name="com.qualcomm.meshmind.ui.AboutFragment"
+        android:label="@string/title_about"
+        tools:layout="@layout/fragment_generic_placeholder" />
+
+</navigation>

@@ -1,0 +1,10 @@
+{
+    "model_name": "MeshMind Emergency Classifier",
+    "backbone": "sentence-transformers/all-MiniLM-L6-v2",
+    "framework": "PyTorch",
+    "deployment_format": "ONNX",
+    "onnx_opset": 18,
+    "classes": 8,
+    "validation_agreement": 1.0,
+    "seed": 42
+}

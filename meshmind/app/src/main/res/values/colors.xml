@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Theme Colors (Light Slate & Emergency Orange/Red) -->
+    <color name="primary_dark">#F1F5F9</color>
+    <color name="primary_light">#E2E8F0</color>
+    <color name="accent_orange">#F97316</color>
+    <color name="accent_red">#EF4444</color>
+    
+    <!-- Status Tones -->
+    <color name="status_green">#16A34A</color>
+    <color name="status_yellow">#CA8A04</color>
+    <color name="status_red">#DC2626</color>
+    
+    <!-- Neutral UI Palette -->
+    <color name="background_slate">#F8FAFC</color>
+    <color name="surface_slate">#FFFFFF</color>
+    <color name="surface_variant_slate">#E2E8F0</color>
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#475569</color>
+    <color name="text_disabled">#94A3B8</color>
+    
+    <!-- Material 3 Standard Color Slots (Light Theme Default) -->
+    <color name="colorPrimary">#F97316</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorContainer">#F1F5F9</color>
+    <color name="colorOnContainer">#0F172A</color>
+    <color name="colorBackground">#F8FAFC</color>
+    <color name="colorOnBackground">#0F172A</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorOnSurface">#0F172A</color>
+    <color name="colorError">#EF4444</color>
+    <color name="colorOnError">#FFFFFF</color>
+</resources>

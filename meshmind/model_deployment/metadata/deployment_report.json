@@ -1,0 +1,10 @@
+{
+    "deployment_target": "Qualcomm Snapdragon",
+    "runtime": "ONNX Runtime / Qualcomm AI Hub",
+    "backbone": "sentence-transformers/all-MiniLM-L6-v2",
+    "onnx_opset": 18,
+    "validation_agreement": 1.0,
+    "average_cpu_latency_ms": 29.567407369613647,
+    "model_size_mb": 0.7459573745727539,
+    "status": "READY"
+}
