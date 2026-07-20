@@ -114,6 +114,16 @@ class TransportSession(
                             }
 
                             if (logicalFrame != null) {
+                                // Phase 13 Observer Tap
+                                try {
+                                    val localNodeId = com.qualcomm.meshmind.core.dependency.ServiceLocator.get(com.qualcomm.meshmind.identity.DeviceIdentityManager::class.java).resolveNodeId()
+                                    val obsMeta = "{\"timestamp\":${System.currentTimeMillis()},\"stage\":\"DIRECT_RECEIVED\",\"node\":\"$localNodeId\",\"packetId\":\"${logicalFrame.packetId}\"}"
+                                    val obsBytes = PacketSerializer.serialize(logicalFrame)
+                                    com.qualcomm.meshmind.observer.ObserverPacketTap.enqueueObservation(
+                                        com.qualcomm.meshmind.observer.ObserverRecord(com.qualcomm.meshmind.observer.ObserverFrameCodec.TYPE_PACKET_OBSERVATION, obsMeta, obsBytes)
+                                    )
+                                } catch (ignored: Exception) {}
+                                
                                 com.qualcomm.meshmind.packet.PacketManager.getInstance().incrementReceived()
                                 com.qualcomm.meshmind.communication.RelayManager.getInstance().processFrame(logicalFrame)
                             }
@@ -180,6 +190,16 @@ class TransportSession(
             }
 
             val rawBytes = PacketSerializer.serialize(frameToSerialize)
+            
+            // Phase 13 Observer Tap
+            try {
+                val localNodeId = com.qualcomm.meshmind.core.dependency.ServiceLocator.get(com.qualcomm.meshmind.identity.DeviceIdentityManager::class.java).resolveNodeId()
+                val obsMeta = "{\"timestamp\":${System.currentTimeMillis()},\"stage\":\"NEXT_HOP_SENT\",\"node\":\"$localNodeId\",\"packetId\":\"${frameToSerialize.packetId}\"}"
+                com.qualcomm.meshmind.observer.ObserverPacketTap.enqueueObservation(
+                    com.qualcomm.meshmind.observer.ObserverRecord(com.qualcomm.meshmind.observer.ObserverFrameCodec.TYPE_PACKET_OBSERVATION, obsMeta, rawBytes)
+                )
+            } catch (ignored: Exception) {}
+            
             writeMutex.withLock {
                 dataOutputStream.writeInt(rawBytes.size)
                 dataOutputStream.write(rawBytes)

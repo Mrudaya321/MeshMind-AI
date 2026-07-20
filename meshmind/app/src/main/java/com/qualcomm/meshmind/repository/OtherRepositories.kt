@@ -240,19 +240,3 @@ class PacketQueueRepository : BaseRepository() {
         }
     }
 }
-
-class DigitalTwinRepository : BaseRepository() {
-    private val packetHistoryRepo by lazy { PacketHistoryRepository() }
-    
-    suspend fun getPacketSuccessRatio(): Double {
-        val recent = packetHistoryRepo.getRecentPackets(100)
-        if (recent.isEmpty()) return 1.0
-        val acked = recent.count { it.status == "Acknowledged" || it.status == "Delivered" }
-        return acked.toDouble() / recent.size
-    }
-
-    suspend fun getTopologySummary(): String {
-        val neighbors = NeighborStateRepository.getInstance().getAllNeighbors()
-        return "Neighbors count: ${neighbors.size}. Links online: ${neighbors.size}"
-    }
-}

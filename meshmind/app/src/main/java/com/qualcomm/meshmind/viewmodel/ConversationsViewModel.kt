@@ -14,7 +14,7 @@ import androidx.lifecycle.viewModelScope
  */
 class ConversationsViewModel : BaseViewModel() {
 
-    private val conversationRepo = ServiceLocator.get(ConversationRepository::class.java)
+    private val conversationRepo = runCatching { ServiceLocator.get(ConversationRepository::class.java) }.getOrNull()
 
     private val _conversations = MutableStateFlow<List<ConversationEntity>>(emptyList())
     val conversations: StateFlow<List<ConversationEntity>> = _conversations.asStateFlow()
@@ -26,7 +26,7 @@ class ConversationsViewModel : BaseViewModel() {
     fun refresh() {
         viewModelScope.launch {
             try {
-                val list = conversationRepo.getAllConversations()
+                val list = conversationRepo?.getAllConversations() ?: emptyList()
                 _conversations.value = list
             } catch (ignored: Exception) {}
         }

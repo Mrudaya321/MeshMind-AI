@@ -29,7 +29,7 @@ class EmergencyPipelineBoundaryTest {
     private lateinit var mockResult: OrtSession.Result
     
     // We will capture the inputs passed to OrtSession.run to verify they reached the boundary
-    private var capturedInputs: Map<String, OnnxTensor>? = null
+    private var capturedInputs: MutableMap<String, OnnxTensor>? = null
 
     @Before
     fun setup() {
@@ -73,10 +73,16 @@ class EmergencyPipelineBoundaryTest {
         val logitsInfo = mockk<ai.onnxruntime.NodeInfo>(relaxed = true)
         
         val int64TensorInfo = mockk<ai.onnxruntime.TensorInfo>(relaxed = true)
-        every { int64TensorInfo.type } returns ai.onnxruntime.OnnxJavaType.INT64
+        val typeField = ai.onnxruntime.TensorInfo::class.java.getDeclaredField("type")
+        typeField.isAccessible = true
+        typeField.set(int64TensorInfo, ai.onnxruntime.OnnxJavaType.INT64)
+        
         val float32TensorInfo = mockk<ai.onnxruntime.TensorInfo>(relaxed = true)
-        every { float32TensorInfo.type } returns ai.onnxruntime.OnnxJavaType.FLOAT
-        every { float32TensorInfo.shape } returns longArrayOf(1, 8)
+        typeField.set(float32TensorInfo, ai.onnxruntime.OnnxJavaType.FLOAT)
+        
+        val shapeField = ai.onnxruntime.TensorInfo::class.java.getDeclaredField("shape")
+        shapeField.isAccessible = true
+        shapeField.set(float32TensorInfo, longArrayOf(1, 8))
         
         every { inputIdsInfo.info } returns int64TensorInfo
         every { attnMaskInfo.info } returns int64TensorInfo

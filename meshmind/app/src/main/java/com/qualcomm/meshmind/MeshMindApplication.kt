@@ -8,7 +8,6 @@ import com.qualcomm.meshmind.core.runtime.SubsystemManager
 import com.qualcomm.meshmind.database.DatabaseManager
 import com.qualcomm.meshmind.diagnostics.DiagnosticsManager
 import com.qualcomm.meshmind.diagnostics.HealthMonitor
-import com.qualcomm.meshmind.digitaltwin.communication.DigitalTwinClient
 import com.qualcomm.meshmind.classification.EmergencyClassifier
 import com.qualcomm.meshmind.logging.MeshLogger
 import com.qualcomm.meshmind.state.ApplicationState
@@ -51,7 +50,6 @@ class MeshMindApplication : Application() {
         val bleDiscoveryManager = com.qualcomm.meshmind.network.discovery.BleDiscoveryManagerImpl(this)
         val wifiDirectTransport = com.qualcomm.meshmind.network.transport.WifiDirectTransportManager(this)
         val wifiDirectConnection = com.qualcomm.meshmind.network.transport.WifiDirectConnectionManager(this)
-        val digitalTwinClient = DigitalTwinClient()
         val telemetryManager = com.qualcomm.meshmind.telemetry.TelemetryManager.getInstance(this)
         val arduinoManager = com.qualcomm.meshmind.arduino.ArduinoIntegrationManager.getInstance(this)
         val performanceManager = com.qualcomm.meshmind.performance.PerformanceManager.getInstance(this)
@@ -60,6 +58,7 @@ class MeshMindApplication : Application() {
         val versionManager = com.qualcomm.meshmind.release.VersionManager.getInstance()
         val diagnosticsManager = DiagnosticsManager()
         val healthMonitor = HealthMonitor()
+        val observerGatewayService = com.qualcomm.meshmind.observer.ObserverGatewayService.getInstance(this)
         
         // Initialize AI Classifier
         val emergencyClassifier = EmergencyClassifier(this)
@@ -81,7 +80,6 @@ class MeshMindApplication : Application() {
         ServiceLocator.register(com.qualcomm.meshmind.network.transport.TransportManager::class.java, wifiDirectTransport)
         ServiceLocator.register(com.qualcomm.meshmind.network.transport.WifiDirectTransportManager::class.java, wifiDirectTransport)
         ServiceLocator.register(com.qualcomm.meshmind.network.transport.WifiDirectConnectionManager::class.java, wifiDirectConnection)
-        ServiceLocator.register(DigitalTwinClient::class.java, digitalTwinClient)
         ServiceLocator.register(com.qualcomm.meshmind.telemetry.TelemetryManager::class.java, telemetryManager)
         ServiceLocator.register(com.qualcomm.meshmind.arduino.ArduinoIntegrationManager::class.java, arduinoManager)
         ServiceLocator.register(com.qualcomm.meshmind.performance.PerformanceManager::class.java, performanceManager)
@@ -93,6 +91,7 @@ class MeshMindApplication : Application() {
         ServiceLocator.register(EmergencyClassifier::class.java, emergencyClassifier)
         ServiceLocator.register(com.qualcomm.meshmind.packet.PacketManager::class.java, packetManager)
         ServiceLocator.register(com.qualcomm.meshmind.network.heartbeat.HeartbeatAdvertiser::class.java, heartbeatAdvertiser)
+        ServiceLocator.register(com.qualcomm.meshmind.observer.ObserverGatewayService::class.java, observerGatewayService)
 
         // 4. Registry operations
         val manager = SubsystemManager.getInstance()
@@ -105,10 +104,10 @@ class MeshMindApplication : Application() {
         manager.registerSubsystem(bleDiscoveryManager)
         manager.registerSubsystem(wifiDirectTransport)
         manager.registerSubsystem(wifiDirectConnection)
-        manager.registerSubsystem(digitalTwinClient)
         manager.registerSubsystem(telemetryManager)
         manager.registerSubsystem(arduinoManager)
         manager.registerSubsystem(performanceManager)
+        manager.registerSubsystem(observerGatewayService)
         manager.registerSubsystem(validationManager)
         manager.registerSubsystem(releaseManager)
         manager.registerSubsystem(versionManager)

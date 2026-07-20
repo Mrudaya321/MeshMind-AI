@@ -6,7 +6,6 @@ import com.qualcomm.meshmind.core.runtime.BaseSubsystem
 import com.qualcomm.meshmind.core.runtime.SubsystemManager
 import com.qualcomm.meshmind.core.scheduling.TaskScheduler
 import com.qualcomm.meshmind.diagnostics.models.SubsystemHealth
-import com.qualcomm.meshmind.digitaltwin.communication.DigitalTwinClient
 import com.qualcomm.meshmind.identity.DeviceIdentityManager
 import com.qualcomm.meshmind.logging.MeshLogger
 import com.qualcomm.meshmind.network.routing.RoutingEngine
@@ -19,7 +18,6 @@ import kotlinx.coroutines.launch
 
 /**
  * Aggregates on-device operational state snapshots and events in Kotlin.
- * Feeds structured summaries asynchronously into the passive DigitalTwinClient.
  */
 class TelemetryManager(private val context: Context) : BaseSubsystem {
 
@@ -91,9 +89,7 @@ class TelemetryManager(private val context: Context) : BaseSubsystem {
 
         telemetryScope.launch {
             try {
-                val payload = "EVENT:$localNodeId:$name:$description:${System.currentTimeMillis()}"
-                val client = ServiceLocator.get(DigitalTwinClient::class.java)
-                client.pushTelemetrySnapshot(payload)
+                // DigitalTwinClient removed in Phase 13
             } catch (ignored: Exception) {}
         }
     }
@@ -111,32 +107,6 @@ class TelemetryManager(private val context: Context) : BaseSubsystem {
                 val neighborsCount = NeighborStateRepository.getInstance().getAllNeighbors().size
                 val routesCount = RoutingState.getInstance().getAllRoutes().size
                 
-                sb.append("SNAPSHOT\n")
-                sb.append("nodeId:$localNodeId\n")
-                sb.append("uptimeMs:$uptime\n")
-                sb.append("timestamp:$now\n")
-                sb.append("neighbors:$neighborsCount\n")
-                sb.append("routes:$routesCount\n")
-                
-                val infraNodes = com.qualcomm.meshmind.arduino.InfrastructureRepository.getInstance().getAllNodes()
-                sb.append("infraCount:${infraNodes.size}\n")
-                for (infra in infraNodes) {
-                    sb.append("infra:${infra.nodeId}:${infra.batteryPercent}:${infra.isEmergencyTriggered}\n")
-                }
-                
-                // Append Subsystems Health Reports
-                val manager = SubsystemManager.getInstance()
-                val healthReports = manager.getSubsystemsHealth()
-                sb.append("HEALTH_START\n")
-                for (health in healthReports) {
-                    sb.append("${health.subsystemName}:${health.isOperational}:${health.errorCount}:${health.diagnosticMessage}\n")
-                }
-                sb.append("HEALTH_END\n")
-
-                val client = ServiceLocator.get(DigitalTwinClient::class.java)
-                client.pushTelemetrySnapshot(sb.toString())
-
-                // Also persist telemetry to local database
                 val telemetryRepo = ServiceLocator.get(com.qualcomm.meshmind.repository.TelemetryRepository::class.java)
                 val collector = ServiceLocator.get(com.qualcomm.meshmind.telemetry.SystemTelemetryCollector::class.java)
                 val rawStats = collector.collectCurrentTelemetry()

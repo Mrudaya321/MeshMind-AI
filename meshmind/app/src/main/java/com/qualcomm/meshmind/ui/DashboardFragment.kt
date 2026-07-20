@@ -79,8 +79,8 @@ class DashboardFragment : BaseFragment() {
             getNavController().navigate(R.id.action_dashboard_to_neighborMonitor)
         }
 
-        binding!!.btnDigitalTwin.setOnClickListener {
-            getNavController().navigate(R.id.action_dashboard_to_digitalTwin)
+        binding!!.btnMeshObserver.setOnClickListener {
+            getNavController().navigate(R.id.action_dashboard_to_meshObserver)
         }
 
         binding!!.btnPacketInspector.setOnClickListener {

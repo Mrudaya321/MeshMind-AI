@@ -112,6 +112,16 @@ class RelayManager : BaseSubsystem {
                         stage = "REMOTE_DESTINATION_MATCHED"
                     )
                     MeshLogger.i(TAG, "Frame ${frame.packetId} reached terminal destination. Delivering locally.")
+                    
+                    // Phase 13 Observer Tap
+                    try {
+                        val obsMeta = "{\"timestamp\":${System.currentTimeMillis()},\"stage\":\"RELAY_ACCEPTED\",\"node\":\"$localNodeId\",\"packetId\":\"${frame.packetId}\"}"
+                        val obsBytes = com.qualcomm.meshmind.packet.serializer.PacketSerializer.serialize(frame)
+                        com.qualcomm.meshmind.observer.ObserverPacketTap.enqueueObservation(
+                            com.qualcomm.meshmind.observer.ObserverRecord(com.qualcomm.meshmind.observer.ObserverFrameCodec.TYPE_PACKET_OBSERVATION, obsMeta, obsBytes)
+                        )
+                    } catch (ignored: Exception) {}
+                    
                     // Deliver to local reliable communication manager
                     ReliableCommunicationManager.getInstance().processIncomingRawBytes(
                         com.qualcomm.meshmind.packet.serializer.PacketSerializer.serialize(frame)
@@ -252,6 +262,15 @@ class RelayManager : BaseSubsystem {
                         logPacketEvent(updatedFrame, "ForwardedSuccessfully")
                         ServiceLocator.get(MessageRepository::class.java).updateMessageStatus(updatedFrame.packetId, "Transmitted")
                         MeshLogger.i(TAG, "Forwarding packet ${frame.packetId} to next hop: $nextHop")
+                        
+                        // Phase 13 Observer Tap
+                        try {
+                            val obsMeta = "{\"timestamp\":${System.currentTimeMillis()},\"stage\":\"RELAY_FORWARDED\",\"node\":\"$localNodeId\",\"packetId\":\"${updatedFrame.packetId}\"}"
+                            val obsBytes = com.qualcomm.meshmind.packet.serializer.PacketSerializer.serialize(updatedFrame)
+                            com.qualcomm.meshmind.observer.ObserverPacketTap.enqueueObservation(
+                                com.qualcomm.meshmind.observer.ObserverRecord(com.qualcomm.meshmind.observer.ObserverFrameCodec.TYPE_PACKET_OBSERVATION, obsMeta, obsBytes)
+                            )
+                        } catch (ignored: Exception) {}
                     } else if (result == com.qualcomm.meshmind.network.transport.TransportResult.PEER_UNRESOLVED) {
                         MeshLogger.w(TAG, "PEER_UNRESOLVED for next hop: $nextHop. DTN buffering...")
                         logPacketEvent(updatedFrame, "BufferedForDTN")

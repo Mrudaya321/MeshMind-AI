@@ -34,8 +34,8 @@
             android:id="@+id/action_dashboard_to_neighborMonitor"
             app:destination="@id/neighborMonitorFragment" />
         <action
-            android:id="@+id/action_dashboard_to_digitalTwin"
-            app:destination="@id/digitalTwinFragment" />
+            android:id="@+id/action_dashboard_to_meshObserver"
+            app:destination="@id/meshObserverFragment" />
         <action
             android:id="@+id/action_dashboard_to_packetInspector"
             app:destination="@id/packetInspectorFragment" />
@@ -84,12 +84,12 @@
         android:label="@string/title_neighbor_monitor"
         tools:layout="@layout/fragment_generic_placeholder" />
 
-    <!-- Digital Twin Dashboard -->
+    <!-- Mesh Observer Dashboard -->
     <fragment
-        android:id="@+id/digitalTwinFragment"
-        android:name="com.qualcomm.meshmind.ui.DigitalTwinFragment"
-        android:label="@string/title_digital_twin"
-        tools:layout="@layout/fragment_generic_placeholder" />
+        android:id="@+id/meshObserverFragment"
+        android:name="com.qualcomm.meshmind.ui.ObserverFragment"
+        android:label="Mesh Observer"
+        tools:layout="@layout/fragment_observer_gateway" />
 
     <!-- Packet Inspector -->
     <fragment

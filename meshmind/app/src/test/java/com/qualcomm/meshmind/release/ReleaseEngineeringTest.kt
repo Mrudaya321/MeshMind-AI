@@ -11,6 +11,7 @@ class ReleaseEngineeringTest {
     @Before
     fun setUp() {
         releaseManager = ReleaseManager.getInstance()
+        releaseManager.setActiveVariant(ReleaseManager.BuildVariant.DEVELOPMENT)
         releaseManager.setDeveloperModeEnabled(false)
     }
 

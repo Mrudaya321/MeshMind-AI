@@ -18,7 +18,6 @@ object RepositoryRegistry {
     val emergencyEventRepository: EmergencyEventRepository by lazy { EmergencyEventRepository() }
     val routingStateRepository: RoutingStateRepository by lazy { RoutingStateRepository() }
     val packetQueueRepository: PacketQueueRepository by lazy { PacketQueueRepository() }
-    val digitalTwinRepository: DigitalTwinRepository by lazy { DigitalTwinRepository() }
 
     /**
      * Publishes all repositories to the ServiceLocator container.
@@ -34,6 +33,5 @@ object RepositoryRegistry {
         ServiceLocator.register(EmergencyEventRepository::class.java, emergencyEventRepository)
         ServiceLocator.register(RoutingStateRepository::class.java, routingStateRepository)
         ServiceLocator.register(PacketQueueRepository::class.java, packetQueueRepository)
-        ServiceLocator.register(DigitalTwinRepository::class.java, digitalTwinRepository)
     }
 }

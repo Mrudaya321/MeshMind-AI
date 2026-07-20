@@ -115,6 +115,15 @@ class ReliableCommunicationManager {
 
             // 3. Enqueue in Priority Scheduler
             scheduler.enqueue(plainFrame)
+            
+            // Phase 13 Observer Tap
+            try {
+                val obsMeta = "{\"timestamp\":${System.currentTimeMillis()},\"stage\":\"LOCAL_ENQUEUED\",\"node\":\"$source\",\"packetId\":\"${plainFrame.packetId}\"}"
+                val obsBytes = PacketSerializer.serialize(plainFrame)
+                com.qualcomm.meshmind.observer.ObserverPacketTap.enqueueObservation(
+                    com.qualcomm.meshmind.observer.ObserverRecord(com.qualcomm.meshmind.observer.ObserverFrameCodec.TYPE_PACKET_OBSERVATION, obsMeta, obsBytes)
+                )
+            } catch (ignored: Exception) {}
             traceId?.let {
                 com.qualcomm.meshmind.diagnostics.ChatDeliveryDiagnostics.logEvent(it, stage = "PACKET_ENQUEUED")
             }
@@ -156,6 +165,15 @@ class ReliableCommunicationManager {
             val frame = builder.build()
             
             scheduler.enqueue(frame)
+            
+            // Phase 13 Observer Tap
+            try {
+                val obsMeta = "{\"timestamp\":${System.currentTimeMillis()},\"stage\":\"LOCAL_ENQUEUED\",\"node\":\"$source\",\"packetId\":\"${frame.packetId}\"}"
+                val obsBytes = PacketSerializer.serialize(frame)
+                com.qualcomm.meshmind.observer.ObserverPacketTap.enqueueObservation(
+                    com.qualcomm.meshmind.observer.ObserverRecord(com.qualcomm.meshmind.observer.ObserverFrameCodec.TYPE_PACKET_OBSERVATION, obsMeta, obsBytes)
+                )
+            } catch (ignored: Exception) {}
             SendResult.Enqueued(frame.packetId)
         } catch (e: Exception) {
             MeshLogger.e(TAG, "Failed to send emergency broadcast", e)
@@ -329,6 +347,14 @@ class ReliableCommunicationManager {
             val messageRepo = ServiceLocator.get(MessageRepository::class.java)
             messageRepo.updateMessageStatus(packetId, "Acknowledged")
             MeshLogger.i(TAG, "ACK received. Confirmed packet: $packetId")
+            
+            // Phase 13 Observer Tap
+            try {
+                val obsMeta = "{\"timestamp\":${System.currentTimeMillis()},\"stage\":\"ACK_OBSERVED\",\"packetId\":\"$packetId\"}"
+                com.qualcomm.meshmind.observer.ObserverPacketTap.enqueueObservation(
+                    com.qualcomm.meshmind.observer.ObserverRecord(com.qualcomm.meshmind.observer.ObserverFrameCodec.TYPE_PACKET_OBSERVATION, obsMeta, null)
+                )
+            } catch (ignored: Exception) {}
         }
     }
 
