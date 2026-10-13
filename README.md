@@ -1636,9 +1636,9 @@ for providing the tools and ecosystem that made MeshMind possible.
 
 For questions, collaborations, or feedback:
 
-📧 Email: your-email@example.com
+📧 Email: mrudaya321@gmail.com
 
-💼 LinkedIn: https://linkedin.com/in/your-profile
+💼 LinkedIn: https://www.linkedin.com/in/udaya-mullal-73254b342
 
 💻 GitHub: https://github.com/Mrudaya321/MeshMind-AI
 
